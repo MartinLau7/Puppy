@@ -46,7 +46,6 @@ public enum LogColor: Sendable {
             return "\u{001B}[36m"
         case .lightGray:
             return "\u{001B}[37m"
-
         case .darkGray:
             return "\u{001B}[90m"
         case .lightRed:
@@ -63,16 +62,15 @@ public enum LogColor: Sendable {
             return "\u{001B}[96m"
         case .white:
             return "\u{001B}[97m"
-
-        case .colorNumber(let number):
+        case let .colorNumber(number):
             return "\u{001B}[38;5;\(number)m"
         }
     }
 }
 
-extension String {
+public extension String {
     @Sendable
-    public func colorize(_ color: LogColor) -> String {
+    func colorize(_ color: LogColor) -> String {
         return color.foregroundCode + self + color.resetCode
     }
 }

@@ -4,12 +4,12 @@ public protocol LogFormattable: Sendable {
     func formatMessage(_ level: LogLevel, message: String, tag: String, function: String, file: String, line: UInt, swiftLogInfo: [String: String], label: String, date: Date, threadID: UInt64) -> String
 }
 
-extension LogFormattable {
-    public func moduleName(_ file: String) -> String {
+public extension LogFormattable {
+    func moduleName(_ file: String) -> String {
         return file.components(separatedBy: "/").first!
     }
 
-    public func fileName(_ file: String) -> String {
+    func fileName(_ file: String) -> String {
         return file.components(separatedBy: "/").last!
     }
 }

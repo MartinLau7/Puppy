@@ -9,12 +9,12 @@ public struct ConsoleLogger: Loggerable, Sendable {
 
     public init(_ label: String, logLevel: LogLevel = .trace, logFormat: LogFormattable? = nil) {
         self.label = label
-        self.queue = DispatchQueue(label: label)
+        queue = DispatchQueue(label: label)
         self.logLevel = logLevel
         self.logFormat = logFormat
     }
 
-    public func log(_ level: LogLevel, string: String) {
+    public func log(_: LogLevel, string: String) {
         print(string)
     }
 }

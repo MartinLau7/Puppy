@@ -1,41 +1,41 @@
 import Foundation
 
 public enum LogLevel: UInt8, Sendable {
-    case trace      = 1
-    case verbose    = 2
-    case debug      = 3
-    case info       = 4
-    case notice     = 5
-    case warning    = 6
-    case error      = 7
-    case critical   = 8
+    case trace = 1
+    case verbose = 2
+    case debug = 3
+    case info = 4
+    case notice = 5
+    case warning = 6
+    case error = 7
+    case critical = 8
 }
 
 extension LogLevel: CustomStringConvertible {
     public var description: String {
         switch self {
         case .trace:
-            return "TRACE"      // 🟤   // darkGray
+            return "TRACE" // 🟤   // darkGray
         case .verbose:
-            return "VERBOSE"    // 🟣   // lightMagenta
-        case.debug:
-            return "DEBUG"      // 🔵   // lightBlue
+            return "VERBOSE" // 🟣   // lightMagenta
+        case .debug:
+            return "DEBUG" // 🔵   // lightBlue
         case .info:
-            return "INFO"       // 🟢   // lightGreen
+            return "INFO" // 🟢   // lightGreen
         case .notice:
-            return "NOTICE"     // 🟠   // yellow
+            return "NOTICE" // 🟠   // yellow
         case .warning:
-            return "WARNING"    // 🟡   // lightYellow
+            return "WARNING" // 🟡   // lightYellow
         case .error:
-            return "ERROR"      // 🔴   // lightRed
+            return "ERROR" // 🔴   // lightRed
         case .critical:
-            return "CRITICAL"   // 💥   // red
+            return "CRITICAL" // 💥   // red
         }
     }
 }
 
-extension LogLevel {
-    public var emoji: String {
+public extension LogLevel {
+    var emoji: String {
         switch self {
         case .trace:
             return "🟤"
@@ -56,7 +56,7 @@ extension LogLevel {
         }
     }
 
-    public var color: LogColor {
+    var color: LogColor {
         switch self {
         case .trace:
             return .darkGray

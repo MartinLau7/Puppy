@@ -2,9 +2,9 @@
 import Foundation
 #if canImport(Darwin)
 #elseif os(Linux)
-import func CPuppy.cpuppy_sys_gettid
+    import func CPuppy.cpuppy_sys_gettid
 #elseif os(Windows)
-import func WinSDK.GetCurrentThreadId
+    import func WinSDK.GetCurrentThreadId
 #else
 #endif // canImport(Darwin)
 
@@ -106,11 +106,11 @@ public struct Puppy: Sendable {
     func currentThreadID() -> UInt64 {
         var threadID: UInt64 = 0
         #if canImport(Darwin)
-        pthread_threadid_np(nil, &threadID)
+            pthread_threadid_np(nil, &threadID)
         #elseif os(Linux)
-        threadID = cpuppy_sys_gettid()
+            threadID = cpuppy_sys_gettid()
         #elseif os(Windows)
-        threadID = UInt64(GetCurrentThreadId())
+            threadID = UInt64(GetCurrentThreadId())
         #else
         #endif // canImport(Darwin)
         return threadID
@@ -125,6 +125,6 @@ public enum WaitingResult {
 @inlinable
 func puppyDebug(_ items: Any) {
     #if DEBUG && PUPPY_DEBUG
-    print("PUPPY_DEBUG:", items)
+        print("PUPPY_DEBUG:", items)
     #endif // DEBUG && PUPPY_DEBUG
 }

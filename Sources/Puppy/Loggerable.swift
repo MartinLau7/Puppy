@@ -13,8 +13,8 @@ public protocol Loggerable: Sendable {
     func flush(completion: @escaping @Sendable () -> Void)
 }
 
-extension Loggerable {
-    public func pickMessage(_ level: LogLevel, message: String, tag: String, function: String, file: String, line: UInt, swiftLogInfo: [String: String], label: String, date: Date, threadID: UInt64) {
+public extension Loggerable {
+    func pickMessage(_ level: LogLevel, message: String, tag: String, function: String, file: String, line: UInt, swiftLogInfo: [String: String], label: String, date: Date, threadID: UInt64) {
         queue.async {
             if level.rawValue < logLevel.rawValue {
                 return
@@ -27,7 +27,7 @@ extension Loggerable {
         }
     }
 
-    public func flush(completion: @escaping @Sendable () -> Void) {
+    func flush(completion: @escaping @Sendable () -> Void) {
         queue.async {
             completion()
         }

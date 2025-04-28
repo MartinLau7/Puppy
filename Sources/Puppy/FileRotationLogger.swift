@@ -17,14 +17,14 @@ public struct FileRotationLogger: FileLoggerable {
 
     public init(_ label: String, logLevel: LogLevel = .trace, logFormat: LogFormattable? = nil, fileURL: URL, filePermission: String = "640", rotationConfig: RotationConfig, delegate: FileRotationLoggerDelegate? = nil) throws {
         self.label = label
-        self.queue = DispatchQueue(label: label)
+        queue = DispatchQueue(label: label)
         self.logLevel = logLevel
         self.logFormat = logFormat
 
-        self.dateFormat = DateFormatter()
-        self.dateFormat.dateFormat = "yyyyMMdd'T'HHmmssZZZZZ"
-        self.dateFormat.timeZone = TimeZone(identifier: "UTC")
-        self.dateFormat.locale = Locale(identifier: "en_US_POSIX")
+        dateFormat = DateFormatter()
+        dateFormat.dateFormat = "yyyyMMdd'T'HHmmssZZZZZ"
+        dateFormat.timeZone = TimeZone(identifier: "UTC")
+        dateFormat.locale = Locale(identifier: "en_US_POSIX")
 
         self.fileURL = fileURL
         puppyDebug("initialized, fileURL: \(fileURL)")
@@ -46,26 +46,26 @@ public struct FileRotationLogger: FileLoggerable {
 
     private func fileSize(_ fileURL: URL) throws -> UInt64 {
         #if os(Windows)
-        return try FileManager.default.windowsFileSize(atPath: fileURL.path)
+            return try FileManager.default.windowsFileSize(atPath: fileURL.path)
         #else
-        let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
-        // swiftlint:disable force_cast
-        return attributes[.size] as! UInt64
-        // swiftlint:enable force_cast
+            let attributes = try FileManager.default.attributesOfItem(atPath: fileURL.path)
+            // swiftlint:disable force_cast
+            return attributes[.size] as! UInt64
+            // swiftlint:enable force_cast
         #endif
     }
 
     private func rotateFiles() {
         guard let size = try? fileSize(fileURL), size > rotationConfig.maxFileSize else { return }
 
-        // Rotates old archived files.
-        rotateOldArchivedFiles()
+        // Rotates old archives.
+        rotateOldArchives()
 
         // Archives the target file.
         archiveTargetFiles()
 
-        // Removes extra archived files.
-        removeArchivedFiles(fileURL, maxArchivedFilesCount: rotationConfig.maxArchivedFilesCount)
+        // Removes extra archives.
+        removeArchives(fileURL, maxArchives: rotationConfig.maxArchives)
 
         // Opens a new target file.
         do {
@@ -78,31 +78,31 @@ public struct FileRotationLogger: FileLoggerable {
 
     private func archiveTargetFiles() {
         do {
-            var archivedFileURL: URL
+            var archivesURL: URL
             switch rotationConfig.suffixExtension {
             case .numbering:
-                archivedFileURL = fileURL.appendingPathExtension("1")
+                archivesURL = fileURL.appendingPathExtension("1")
             case .date_uuid:
-                archivedFileURL = fileURL.appendingPathExtension(dateFormatter(Date(), withFormatter: self.dateFormat) + "_" + UUID().uuidString.lowercased())
+                archivesURL = fileURL.appendingPathExtension(dateFormatter(Date(), withFormatter: dateFormat) + "_" + UUID().uuidString.lowercased())
             }
-            try FileManager.default.moveItem(at: fileURL, to: archivedFileURL)
-            delegate?.fileRotationLogger(self, didArchiveFileURL: fileURL, toFileURL: archivedFileURL)
+            try FileManager.default.moveItem(at: fileURL, to: archivesURL)
+            delegate?.fileRotationLogger(self, didArchiveFileURL: fileURL, toFileURL: archivesURL)
         } catch {
             print("error in archiving the target file, error: \(error.localizedDescription)")
         }
     }
 
-    private func rotateOldArchivedFiles() {
+    private func rotateOldArchives() {
         switch rotationConfig.suffixExtension {
         case .numbering:
             do {
-                let oldArchivedFileURLs = ascArchivedFileURLs(fileURL)
-                for (index, oldArchivedFileURL) in oldArchivedFileURLs.enumerated() {
-                    let generationNumber = oldArchivedFileURLs.count + 1 - index
-                    let rotatedFileURL = oldArchivedFileURL.deletingPathExtension().appendingPathExtension("\(generationNumber)")
+                let oldArchivesURLs = ascArchivesURLs(fileURL)
+                for (index, oldArchivesURL) in oldArchivesURLs.enumerated() {
+                    let generationNumber = oldArchivesURLs.count + 1 - index
+                    let rotatedFileURL = oldArchivesURL.deletingPathExtension().appendingPathExtension("\(generationNumber)")
                     puppyDebug("generationNumber: \(generationNumber), rotatedFileURL: \(rotatedFileURL)")
                     if !FileManager.default.fileExists(atPath: rotatedFileURL.path) {
-                        try FileManager.default.moveItem(at: oldArchivedFileURL, to: rotatedFileURL)
+                        try FileManager.default.moveItem(at: oldArchivesURL, to: rotatedFileURL)
                     }
                 }
             } catch {
@@ -113,70 +113,52 @@ public struct FileRotationLogger: FileLoggerable {
         }
     }
 
-    private func ascArchivedFileURLs(_ fileURL: URL) -> [URL] {
-        var ascArchivedFileURLs: [URL] = []
+    private func ascArchivesURLs(_ fileURL: URL) -> [URL] {
+        var ascArchivesURLs: [URL] = []
         do {
-            let archivedDirectoryURL: URL = fileURL.deletingLastPathComponent()
-            let archivedFileURLs = try FileManager.default.contentsOfDirectory(atPath: archivedDirectoryURL.path)
-                .map { archivedDirectoryURL.appendingPathComponent($0) }
+            let archivesDirectoryURL: URL = fileURL.deletingLastPathComponent()
+            let archivesURLs = try FileManager.default.contentsOfDirectory(atPath: archivesDirectoryURL.path)
+                .map { archivesDirectoryURL.appendingPathComponent($0) }
                 .filter { $0 != fileURL && $0.deletingPathExtension() == fileURL }
 
-            ascArchivedFileURLs = try archivedFileURLs.sorted {
+            ascArchivesURLs = try archivesURLs.sorted {
                 #if os(Windows)
-                let modificationTime0 = try FileManager.default.windowsModificationTime(atPath: $0.path)
-                let modificationTime1 = try FileManager.default.windowsModificationTime(atPath: $1.path)
-                return modificationTime0 < modificationTime1
+                    let modificationTime0 = try FileManager.default.windowsModificationTime(atPath: $0.path)
+                    let modificationTime1 = try FileManager.default.windowsModificationTime(atPath: $1.path)
+                    return modificationTime0 < modificationTime1
                 #else
-                // swiftlint:disable force_cast
-                let modificationDate0 = try FileManager.default.attributesOfItem(atPath: $0.path)[.modificationDate] as! Date
-                let modificationDate1 = try FileManager.default.attributesOfItem(atPath: $1.path)[.modificationDate] as! Date
-                // swiftlint:enable force_cast
-                return modificationDate0.timeIntervalSince1970 < modificationDate1.timeIntervalSince1970
+                    // swiftlint:disable force_cast
+                    let modificationDate0 = try FileManager.default.attributesOfItem(atPath: $0.path)[.modificationDate] as! Date
+                    let modificationDate1 = try FileManager.default.attributesOfItem(atPath: $1.path)[.modificationDate] as! Date
+                    // swiftlint:enable force_cast
+                    return modificationDate0.timeIntervalSince1970 < modificationDate1.timeIntervalSince1970
                 #endif
             }
         } catch {
-            print("error in ascArchivedFileURLs, error: \(error.localizedDescription)")
+            print("error in ascArchivesURLs, error: \(error.localizedDescription)")
         }
-        puppyDebug("ascArchivedFileURLs: \(ascArchivedFileURLs)")
-        return ascArchivedFileURLs
+        puppyDebug("ascArchivesURLs: \(ascArchivesURLs)")
+        return ascArchivesURLs
     }
 
-    private func removeArchivedFiles(_ fileURL: URL, maxArchivedFilesCount: UInt8) {
+    private func removeArchives(_ fileURL: URL, maxArchives: UInt8) {
         do {
-            let archivedFileURLs = ascArchivedFileURLs(fileURL)
-            if archivedFileURLs.count > maxArchivedFilesCount {
-                for index in 0 ..< archivedFileURLs.count - Int(maxArchivedFilesCount) {
-                    puppyDebug("\(archivedFileURLs[index]) will be removed...")
-                    try FileManager.default.removeItem(at: archivedFileURLs[index])
-                    puppyDebug("\(archivedFileURLs[index]) has been removed")
-                    delegate?.fileRotationLogger(self, didRemoveArchivedFileURL: archivedFileURLs[index])
+            let archivesURLs = ascArchivesURLs(fileURL)
+            if archivesURLs.count > maxArchives {
+                for index in 0 ..< archivesURLs.count - Int(maxArchives) {
+                    puppyDebug("\(archivesURLs[index]) will be removed...")
+                    try FileManager.default.removeItem(at: archivesURLs[index])
+                    puppyDebug("\(archivesURLs[index]) has been removed")
+                    delegate?.fileRotationLogger(self, didRemoveArchivesURL: archivesURLs[index])
                 }
             }
         } catch {
-            print("error in removing extra archived files, error: \(error.localizedDescription)")
+            print("error in removing extra archives, error: \(error.localizedDescription)")
         }
-    }
-}
-
-public struct RotationConfig: Sendable {
-    public enum SuffixExtension: Sendable {
-        case numbering
-        case date_uuid
-    }
-    public var suffixExtension: SuffixExtension
-
-    public typealias ByteCount = UInt64
-    public var maxFileSize: ByteCount
-    public var maxArchivedFilesCount: UInt8
-
-    public init(suffixExtension: SuffixExtension = .numbering, maxFileSize: ByteCount = 10 * 1024 * 1024, maxArchivedFilesCount: UInt8 = 5) {
-        self.suffixExtension = suffixExtension
-        self.maxFileSize = maxFileSize
-        self.maxArchivedFilesCount = maxArchivedFilesCount
     }
 }
 
 public protocol FileRotationLoggerDelegate: AnyObject, Sendable {
     func fileRotationLogger(_ fileRotationLogger: FileRotationLogger, didArchiveFileURL: URL, toFileURL: URL)
-    func fileRotationLogger(_ fileRotationLogger: FileRotationLogger, didRemoveArchivedFileURL: URL)
+    func fileRotationLogger(_ fileRotationLogger: FileRotationLogger, didRemoveArchivesURL: URL)
 }
